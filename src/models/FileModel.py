@@ -43,10 +43,28 @@ class FileModel(BaseDataModel):
         
         return file
     
-    async def get_all_files(self, file_project_id: str):
+    async def get_all_files(self, file_project_id: str, file_type: str ):
 
 
-        return await self.collection.find({
+        records = await self.collection.find({
 
-            "file_project_id" : ObjectId(file_project_id) if isinstance(file_project_id, str) else file_project_id
-            }).to_list(length=None)
+            "file_project_id" : ObjectId(file_project_id) if isinstance(file_project_id, str) else file_project_id,
+            "file_type" : file_type,
+        }).to_list(length=None)
+    
+    # 3am hawwel l dictionary ly jeye mn l DB la pydantic object
+        return [
+            Files(**record)
+            for record in records
+        ]
+    
+    async def get_file_record(self, file_project_id: str, file_name: str):
+        record = await self.collection.find_one({
+            "file_project_id" : ObjectId(file_project_id) if isinstance(file_project_id, str) else file_project_id,
+            "file_name": file_name
+        })
+
+        if record:
+            return Files(**record)
+        
+        return None

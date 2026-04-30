@@ -17,7 +17,7 @@ from models.ProjectModel import ProjectModel
 from models.ChunkModel import ChunkModel
 from models.db_schema import DataChunk, Files
 from models.FileModel import FileModel
-from models.enumerations import FileTypeEnum
+from models import FileTypeEnum
 
 logger = logging.getLogger('uvicorn.error')
 
@@ -110,14 +110,11 @@ async def upload_data(request: Request, project_id: str, file: UploadFile,
 # Hayde hon aam 5alle l text bl pdf yet2assam la chunks
 async def process_endpoint(request: Request, project_id : str, process_request : ProcessRequest):
 
-    file_id = process_request.file_id
+    #file_id = process_request.file_id
+
     chunk_size = process_request.chunk_size
     overlap_size = process_request.overlap_size
     do_reset = process_request.do_reset
-
-
-
-
 
 
 
@@ -132,72 +129,155 @@ async def process_endpoint(request: Request, project_id : str, process_request :
     chunk_model = await ChunkModel.create_instance(
 
         db_client = request.app.db_client
-
+    )
+        
+    file_model = await FileModel.create_instance(
+        db_client = request.app.db_client
         )
+
+        
     
-    if do_reset == 1:
+    """if do_reset == 1:
+        _ = await chunk_model.delete_chunks_by_projectID(
+            project_id = project.id
+        )"""
+        
+
+
+# Hayde eza badde estad3e kel shi files b collection l files bl mongodb
+
+    project_file_ids = {}
+    # eza 3nde file wahad bhotta b list w begeba
+    if  process_request.file_id:
+        file_record = await file_model.get_file_record(
+             file_project_id = project.id,
+             file_name = process_request.file_id
+             )
+         
+        if file_record is None:
+            return JSONResponse(
+
+            status_code = status.HTTP_400_BAD_REQUEST,
+            content = {
+                "signal" : ResponseSignal.NO_ID.value,
+                })
+         
+         
+        project_file_ids = {
+            file_record.id : file_record.file_name
+        }
+
+    # eza 3nde akter mn file beroh begebon kellon
+    else:
+        file_model = await FileModel.create_instance(
+        db_client = request.app.db_client
+        )
+        
+        project_files = await file_model.get_all_files(
+
+            file_project_id = project.id,
+            file_type = FileTypeEnum.FILE_TYPE.value,
+            )
+
+        project_file_ids = {
+
+            record.id: record.file_name
+            for record in project_files
+        }
+
+    if len(project_file_ids) == 0:
+        return JSONResponse(
+
+            status_code = status.HTTP_400_BAD_REQUEST,
+            content = {
+                "signal" : ResponseSignal.NO_FILES_ERROR.value,
+                }
+
+    )
+
+
+    process_controller = ProcessController(project_id=project_id)
+
+    number_of_files = 0
+    number_records = 0
+
+    chunk_model = await ChunkModel.create_instance(
+
+            db_client = request.app.db_client
+
+            )
+
+    if int(do_reset) == 1:
         _ = await chunk_model.delete_chunks_by_projectID(
             project_id = project.id
         )
 
 
-
-
-
-
-
-    process_controller = ProcessController(project_id=project_id)
     
-    file_content = process_controller.get_file_content(file_id=file_id)
 
-    file_chunks = process_controller.process_file_content(
+    for file_id1, file_id in project_file_ids.items():
 
-        file_content = file_content,
-        file_id = file_id,
-        chunk_size = chunk_size,
-        overlap_size = overlap_size,
-        
-    )
+        file_content = process_controller.get_file_content(file_id=file_id)
 
-    if file_chunks is None or len(file_chunks) == 0:
-        return JSONResponse(
+        # eza mafe content bl file yaany fade l continue bero7 3aly ba3do
+        if file_content is None:
+            logger.error(f"Error while proccessing file: {file_id}")
+            continue
 
-            status_code = status.HTTP_400_BAD_REQUEST,
-            content ={
-                "singal": ResponseSignal.PROCESSING_FAILED.value
-            }
+        file_chunks = process_controller.process_file_content(
+
+            file_content = file_content,
+            file_id = file_id,
+            chunk_size = chunk_size,
+            overlap_size = overlap_size,
+            
         )
 
-    #  return file_chunks
+        if file_chunks is None or len(file_chunks) == 0:
+            return JSONResponse(
+
+                status_code = status.HTTP_400_BAD_REQUEST,
+                content ={
+                    "singal": ResponseSignal.PROCESSING_FAILED.value
+                }
+            )
+
+        #  return file_chunks
 
 
-    file_chunks_records = [
+        file_chunks_records = [
+            
+            DataChunk (
         
-        DataChunk (
+            
+            chunk_text = chunk.page_content,
+            chunk_metadata = chunk.metadata,
+            chunk_order = i+1,
+            chunk_project_id = project.id,
+            chunk_file_id = file_id1
+           )
         
-        chunk_text = chunk.page_content,
-        chunk_metadata = chunk.metadata,
-        chunk_order = i+1,
-        chunk_project_id = project.id
+            for i, chunk in enumerate(file_chunks)
+            ]   
 
-        )
-    
-        for i, chunk in enumerate(file_chunks)
-        ]   
+        chunk_model = await ChunkModel.create_instance(
 
-    chunk_model = await ChunkModel.create_instance(
+            db_client = request.app.db_client
 
-        db_client = request.app.db_client
+            )
+        
 
-        )
-
-    number_records = await  chunk_model.insert_many_chunks(chunks = file_chunks_records)
+        #number_records = await  chunk_model.insert_many_chunks(chunks = file_chunks_records)
+        number_records += await  chunk_model.insert_many_chunks(chunks = file_chunks_records)
+        number_of_files += 1
+        
 
     return JSONResponse(
 
             content = {
                 "signal" : ResponseSignal.PROCESSING_Success.value,
-                "Inserted_Chunks" : number_records
+                "Inserted_Chunks" : number_records,
+                "number_of_files": number_of_files
 
             }
 

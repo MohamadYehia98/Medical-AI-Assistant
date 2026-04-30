@@ -70,7 +70,7 @@ class ChunkModel(BaseDataModel):
     async def delete_chunks_by_projectID(self, project_id: object):
         result = await self.collection.delete_many({
 
-                "chunk_projectID": project_id
+                "chunk_project_id": project_id
 
         })
 
