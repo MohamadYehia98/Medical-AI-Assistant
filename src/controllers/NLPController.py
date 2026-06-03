@@ -107,7 +107,7 @@ class NLPController(BaseController):
         # Step 1: Retrieved related document
 
 
-        answer, full_prompt, chat_history = None,None,None
+        full_prompt, answer, chat_history = None, None, None
         retrieved_document = self.search_vectordb_collection(
             project = project,
             text = query,
@@ -115,7 +115,7 @@ class NLPController(BaseController):
         )
 
         if not retrieved_document or len(retrieved_document) == 0:
-            return answer, full_prompt, chat_history
+            return  full_prompt, answer, chat_history
         
         # Step 2 : Contruct LLM Prompt
 
@@ -156,7 +156,7 @@ class NLPController(BaseController):
             prompt = full_prompt,
             chat_history = chat_history,
     )
-        return answer, full_prompt, chat_history
+        return answer, full_prompt,  chat_history
     
 
 
