@@ -1,0 +1,214 @@
+<!doctype html>
+<html lang="en">
+
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>Mini RAG Chat</title>
+    <style>
+        body {
+            font-family: Arial, Helvetica, sans-serif;
+            background: #f5f7fb;
+            margin: 0;
+            padding: 0;
+            display: flex;
+            height: 100vh;
+            align-items: center;
+            justify-content: center
+        }
+        
+        .container {
+            width: 100%;
+            max-width: 720px;
+            background: #fff;
+            border-radius: 8px;
+            box-shadow: 0 6px 24px rgba(20, 20, 60, .08);
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            height: 80vh
+        }
+        
+        .header {
+            padding: 16px 20px;
+            border-bottom: 1px solid #eee;
+            background: linear-gradient(90deg, #3b82f6 0%, #06b6d4 100%);
+            color: white
+        }
+        
+        .messages {
+            flex: 1;
+            padding: 16px;
+            overflow: auto;
+            display: flex;
+            flex-direction: column;
+            gap: 12px
+        }
+        
+        .message {
+            max-width: 80%;
+            padding: 10px 14px;
+            border-radius: 12px;
+            line-height: 1.4
+        }
+        
+        .me {
+            align-self: flex-end;
+            background: #e0f2fe;
+            color: #042047;
+            border-bottom-right-radius: 4px
+        }
+        
+        .bot {
+            align-self: flex-start;
+            background: #f1f5f9;
+            color: #041022;
+            border-bottom-left-radius: 4px
+        }
+        
+        .footer {
+            padding: 12px;
+            border-top: 1px solid #eee;
+            display: flex;
+            gap: 8px
+        }
+        
+        input[type=text] {
+            flex: 1;
+            padding: 10px 12px;
+            border-radius: 8px;
+            border: 1px solid #d6d9e6
+        }
+        
+        button {
+            padding: 10px 14px;
+            border-radius: 8px;
+            border: none;
+            background: #3b82f6;
+            color: white;
+            cursor: pointer
+        }
+        
+        button:disabled {
+            opacity: .6
+        }
+        
+        .meta {
+            font-size: 12px;
+            color: #6b7280
+        }
+        
+        .loading {
+            display: none;
+            margin-left: 8px
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container" role="main">
+        <div class="header" style="display:flex;align-items:center;justify-content:space-between;gap:12px;">
+            <div>
+                <strong>AI Healthcare Assistant</strong>
+                <div class="meta">Sends queries to the backend RAG endpoint and displays answers.</div>
+            </div>
+            <div style="display:flex;align-items:center;gap:8px">
+                <label style="font-size:13px;color:rgba(255,255,255,0.9)">Project:</label>
+                <input id="project-input" type="text" value="1" style="padding:6px 8px;border-radius:6px;border:none;width:80px" />
+                <button id="set-project" type="button" style="padding:6px 8px;border-radius:6px;background:rgba(0,0,0,0.12)">Set</button>
+            </div>
+        </div>
+
+        <div id="messages" class="messages" aria-live="polite"></div>
+
+        <form id="chat-form" class="footer">
+            <input id="input" type="text" placeholder="Ask something Please." autocomplete="off" />
+            <button id="send-btn" type="submit">Send</button>
+            <span id="loading" class="loading">⏳</span>
+        </form>
+    </div>
+
+    <script>
+        // initialize project from URL param if present
+        const params = new URLSearchParams(window.location.search);
+        const paramProject = params.get('project');
+        const projectInputEl = document.getElementById('project-input');
+        if (paramProject && projectInputEl) projectInputEl.value = paramProject;
+
+        let PROJECT_ID = (projectInputEl && projectInputEl.value) ? projectInputEl.value : '1';
+        let API_PATH = `/api/v1/nlp/rag/answer/${PROJECT_ID}`;
+
+        const messagesEl = document.getElementById('messages');
+        const form = document.getElementById('chat-form');
+        const input = document.getElementById('input');
+        const sendBtn = document.getElementById('send-btn');
+        const loadingEl = document.getElementById('loading');
+
+        function appendMessage(who, text) {
+            const el = document.createElement('div');
+            el.className = 'message ' + (who === 'me' ? 'me' : 'bot');
+            el.textContent = text;
+            messagesEl.appendChild(el);
+            messagesEl.scrollTop = messagesEl.scrollHeight;
+        }
+
+        form.addEventListener('submit', async(e) => {
+            e.preventDefault();
+            const text = input.value.trim();
+            if (!text) return;
+            appendMessage('me', text);
+            input.value = '';
+            loadingEl.style.display = 'inline-block';
+            sendBtn.disabled = true;
+
+            try {
+                const res = await fetch(API_PATH, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        text,
+                        limit: 5
+                    })
+                });
+
+                const data = await res.json().catch(() => ({}));
+
+                if (res.ok && (data.signal === 'Answer Success' || data.signal === 'RAG_ANSWER_SUCCESS' || data.answer)) {
+                    const answer = (typeof data.answer === 'string') ? data.answer : JSON.stringify(data.answer || data);
+                    appendMessage('bot', answer);
+                } else {
+                    const msg = data && data.signal ? data.signal : `HTTP ${res.status}`;
+                    appendMessage('bot', 'Error: ' + msg);
+                }
+
+            } catch (err) {
+                appendMessage('bot', 'Error: ' + err.message);
+            } finally {
+                loadingEl.style.display = 'none';
+                sendBtn.disabled = false;
+            }
+        });
+
+        // show a starter message
+        appendMessage('bot', 'Hello — ask a question and I TRY To Find The Answer!');
+
+        // project setter
+        const setBtn = document.getElementById('set-project');
+        const projectInput = document.getElementById('project-input');
+        setBtn.addEventListener('click', () => {
+            const newId = (projectInput.value || '').trim();
+            if (!newId) return;
+            PROJECT_ID = newId;
+            API_PATH = `/api/v1/nlp/rag/answer/${PROJECT_ID}`;
+            // update browser URL without reloading
+            const newUrl = new URL(window.location.href);
+            newUrl.searchParams.set('project', PROJECT_ID);
+            window.history.replaceState({}, '', newUrl);
+            appendMessage('bot', `Project set to ${PROJECT_ID}. URL updated.`);
+        });
+    </script>
+</body>
+
+</html>

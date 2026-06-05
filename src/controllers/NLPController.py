@@ -39,14 +39,17 @@ class NLPController(BaseController):
 
         texts = [c.chunk_text for c in chunks]
         metadata = [c.chunk_metadata for c in chunks]
-        vectors = [
+        vectors = self.embedding_client.embeded_text(
+            text = texts,
+            document_type = DocumentTypeEnum.DOCUMENT.value,
+        )
 
-            self.embedding_client.embeded_text(text = text, document_type = DocumentTypeEnum.DOCUMENT.value)
-            for text in texts
-        ]
-
-        """vectors = self.embedding_client.embeded_text(text = texts, 
-                                                     document_type = DocumentTypeEnum.DOCUMENT.value)"""
+        if not vectors or len(vectors) != len(texts):
+            # Fall back to one-by-one embedding if batch embedding fails
+            vectors = [
+                self.embedding_client.embeded_text(text = text, document_type = DocumentTypeEnum.DOCUMENT.value)
+                for text in texts
+            ]
         
         
 

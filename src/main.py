@@ -1,4 +1,7 @@
 from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import HTMLResponse
+from pathlib import Path
 from routes import base, data, nlp
 from motor.motor_asyncio import AsyncIOMotorClient
 from helpers.config import getSettings
@@ -66,3 +69,12 @@ app.on_event("shutdown")(shutdown_span)
 app.include_router(base.base_router)
 app.include_router(data.data_router)
 app.include_router(nlp.nlp_router)
+
+
+
+@app.get("/", response_class=HTMLResponse)
+async def index():
+    index_path = Path(__file__).parent / "static" / "index.html"
+    if index_path.exists():
+        return HTMLResponse(index_path.read_text(encoding="utf-8"))
+    return HTMLResponse("<h1>Index not found</h1>", status_code=404)

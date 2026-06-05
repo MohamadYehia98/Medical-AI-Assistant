@@ -70,7 +70,7 @@ class CoHereProvider(LLMinterface):
         return response.text
     
 
-    def embeded_text(self, text: str, document_type: str = None):
+    def embeded_text(self, text, document_type: str = None):
 
         if not self.client:
             self.logger.error("CoHere client was not set")
@@ -82,12 +82,17 @@ class CoHereProvider(LLMinterface):
         
         input_type = CoHereEnum.DOCUMENT
         if document_type == DocumentTypeEnum.QUERY:
-            document_type = CoHereEnum.QUERY
-        
-        response = self.client.embed(
+            input_type = CoHereEnum.QUERY
 
+        texts = []
+        if isinstance(text, list):
+            texts = [self.process_text(item) for item in text]
+        else:
+            texts = [self.process_text(text)]
+
+        response = self.client.embed(
             model = self.embedding_model_id,
-            texts = [self.process_text(text)],
+            texts = texts,
             input_type = input_type,
             embedding_types = ['float'],
         )
@@ -95,8 +100,11 @@ class CoHereProvider(LLMinterface):
         if not response or not response.embeddings or not response.embeddings.float:
             self.logger.error("Error while embedding text with CoHere")
             return None
-        
-        return response.embeddings.float[0] 
+
+        embeddings = response.embeddings.float
+        if isinstance(text, list):
+            return embeddings
+        return embeddings[0]
    
 
 

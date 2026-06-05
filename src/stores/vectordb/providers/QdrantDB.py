@@ -71,18 +71,15 @@ class QdrantDB(VectorDBInterface):
         try:
             _ = self.client.upload_records(
                 collection_name = collection_name,
-
                 records = [
-
                     models.Record(
-                        id = [record_id],
+                        id = record_id,
                         vector = vector,
                         payload = {
                             "text" : text,
                             "metadata": metadata
                         }
                     )
-
                 ]
             )
 
@@ -94,50 +91,50 @@ class QdrantDB(VectorDBInterface):
 
     def insert_many(self, collection_name: str, texts: list, vectors: list,
                           metadata : list = None,
-                          record_ids: int = None,
+                          record_ids: list = None,
                           batch_size: int = 50):
         
         if metadata is None:
             metadata = [None] * len(texts)
 
         if record_ids is None:
-            record_ids = (range(0,len(texts)))
+            record_ids = list(range(len(texts)))
 
         for i in range(0, len(texts), batch_size):
             batch_end = i + batch_size
 
-            batch_texts = texts[i:batch_end] 
+            batch_texts = texts[i:batch_end]
             batch_vectors = vectors[i:batch_end]
             batch_metadata = metadata[i:batch_end]
-            batch_records = record_ids[i:batch_end]
+            batch_ids = record_ids[i:batch_end]
 
-            batch_records = [
+            batch_records = []
+            for x in range(len(batch_texts)):
+                vec = batch_vectors[x]
+                if not isinstance(vec, list) or len(vec) == 0:
+                    self.logger.error(f"Invalid vector at batch index {i + x}: {type(vec)} {vec}")
+                    return False
 
-               models.Record(
-                    id = batch_records[x],
-                    vector = batch_vectors[x],
-                    payload = {
-                        "text" : batch_texts[x] ,
-                        "metadata": batch_metadata[x]
-                    }
+                batch_records.append(
+                    models.Record(
+                        id = batch_ids[x],
+                        vector = vec,
+                        payload = {
+                            "text" : batch_texts[x],
+                            "metadata": batch_metadata[x]
+                        }
+                    )
                 )
-
-                for x in range(len(batch_texts))
-
-
-            ]
 
             try:
                 _ = self.client.upload_records(
-                collection_name = collection_name,
-                records = batch_records,
+                    collection_name = collection_name,
+                    records = batch_records,
                 )
 
             except Exception as e:
                 self.logger.error(f"Error while inserting record: {e}")
                 return False
-
-        
 
         return True 
     

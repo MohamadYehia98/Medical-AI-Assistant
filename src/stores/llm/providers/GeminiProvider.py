@@ -92,7 +92,7 @@ class GeminiProvider(LLMinterface):
             contents = text,
         )
         
-        if not response or not response.data or not len(response.data) == 0 or not response.data[0].embedding:
+        if not response or not response.values or len(response.values) == 0 or not response.embeddings[0].values:
             self.logger.error("Error while embedding text with Gemini")
             return None
         
