@@ -1,22 +1,26 @@
-# Healthcare AI Assistant — RAG System
+# Medical AI Assistant — RAG Q&A System
 
 A retrieval-augmented generation (RAG) system for healthcare documents built with FastAPI, MongoDB, Qdrant vector database, and Cohere embeddings. Includes a vanilla JavaScript frontend served directly from FastAPI.
 
+## Please Visit The Link
+
+[mini-rag-project-onuw.onrender.com](https://mini-rag-project-onuw.onrender.com)
+
 ## Features
 
-- **RAG Query Interface**: Chat-based interface to ask questions about indexed healthcare documents
+- **RAG Query Interface**: Chat-based interface to ask questions about indexed Medical documents
 - **Batch Embedding**: Efficient Cohere embeddings with batch processing (reduces API calls)
 - **Vector Search**: Qdrant vector database for semantic search
 - **MongoDB Storage**: Document and project metadata storage
-- **Single-Page Frontend**: Vanilla HTML/CSS/JS served by FastAPI (no npm, no build step)
+- **Single-Page Frontend**: Vanilla HTML/CSS/JS served by FastAPI  
 - **Project Selector**: Switch between different RAG projects at runtime
 
 ## Project Structure
 
 ```
-Healthcare AI Assistant/
+Medical AI Assistant/
 ├── docker/
-│   ├── docker-compose.yaml       # MongoDB + Qdrant containers
+│   ├── docker-compose.yaml       # MongoDB 
 │   └── mongoDB/                  # MongoDB data volume
 ├── src/
 │   ├── main.py                   # FastAPI app entry point
@@ -40,7 +44,8 @@ Healthcare AI Assistant/
 
 ## Prerequisites
 
-- **Docker & Docker Compose** (MongoDB only)
+- **MongoDB Atlas** account and cluster for remote MongoDB
+- **Qdrant Cloud** account and API key for remote vector search
 - **Python 3.9+** with venv or conda
 - **Studio 3T** (optional) — [download](https://studio3t.com/download/)
 - **API Keys**:
@@ -50,31 +55,20 @@ Healthcare AI Assistant/
 
 ## Quick Start
 
-### 1. Start MongoDB with Docker
+### 1. Configure MongoDB Atlas and Qdrant Cloud
 
-```bash
-cd docker
-docker-compose up -d
-```
-
-Starts **MongoDB** on `localhost:27007` (user: `admin`, password: `admin`)
-
-**Qdrant runs locally** (not Docker) — data in `src/assets/database/qdrant_db/`
-
-Verify MongoDB:
-```bash
-docker ps | grep mongoDB
-```
+For remote deployment, skip local Docker setup and connect using your MongoDB Atlas cluster string and Qdrant Cloud endpoint.
 
 ### 2. Connect to MongoDB with Studio 3T
 
 1. **Open Studio 3T** → **New Connection**
-2. **Server**: `localhost`
-3. **Port**: `27007`
-4. **Username**: `admin`
-5. **Password**: `admin`
-6. **Database**: `mini-rag`
-7. Click "Test Connection" → "Save"
+2. **Server**: copy your Atlas cluster host from Atlas connection string
+3. **Port**: default MongoDB Atlas port (`27017` or as provided)
+4. **Username**: Atlas database user
+5. **Password**: Atlas user password
+6. **Authentication Database**: `admin` or your Atlas auth DB
+7. **Database**: `mini-rag`
+8. Click "Test Connection" → "Save"
 
 ### 3. Set Up Python Environment
 
@@ -98,9 +92,13 @@ pip install -r requirements.txt
 
 Edit `src/.env`:
 ```
-MONGODB_URL=mongodb://admin:admin@localhost:27007
+MONGODB_URL=mongodb+srv://<username>:<password>@<cluster-host>/mini-rag?retryWrites=true&w=majority
 MONGODB_DATABASE=mini-rag
-VECTORDB_PATH=./assets/database/qdrant_db
+
+VECTORDB_BACKEND=QDRANT
+# For Qdrant Cloud, set the remote URL and API key below.
+VECTOR_DB_URL=https://<your-cloud-instance>.eu-central-1-0.aws.cloud.qdrant.io
+VECTOR_DB_API_KEY=your_qdrant_cloud_api_key
 VECTOR_DB_DISTANCE_METHOD=cosine
 
 GENERATION_BACKEND=GEMINI
