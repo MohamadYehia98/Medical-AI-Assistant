@@ -27,7 +27,7 @@ class QdrantDB(VectorDBInterface):
             if isinstance(self.db_path, str) and (self.db_path.startswith("http://") or self.db_path.startswith("https://")):
                 # remote Qdrant (hosted) expects url and optional api_key
                 if self.api_key:
-                    self.client = QdrantClient(url=self.db_path, api_key=self.api_key)
+                    self.client = QdrantClient(url=self.db_path, api_key=self.api_key, timeout=700)
                 else:
                     self.client = QdrantClient(url=self.db_path)
             else:
@@ -106,7 +106,7 @@ class QdrantDB(VectorDBInterface):
     def insert_many(self, collection_name: str, texts: list, vectors: list,
                           metadata : list = None,
                           record_ids: list = None,
-                          batch_size: int = 50):
+                          batch_size: int = 10):
         
         if metadata is None:
             metadata = [None] * len(texts)

@@ -13,8 +13,6 @@
             padding: 0;
             display: flex;
             height: 100vh;
-            align-items: center;
-            justify-content: center
         }
         
         .container {
@@ -26,7 +24,7 @@
             overflow: hidden;
             display: flex;
             flex-direction: column;
-            height: 80vh
+            height: 100vh
         }
         
         .header {
@@ -104,9 +102,8 @@
         }
         /* Responsive adjustments */
         .container {
-            margin: 16px;
-            height: auto;
-            max-height: calc(100vh - 40px);
+            margin: 0;
+            height: 100vh;
         }
 
         @media (max-width: 720px) {
@@ -145,7 +142,7 @@
     <div class="container" role="main">
         <div class="header" style="display:flex;align-items:center;justify-content:space-between;gap:12px;">
             <div>
-                <strong>AI Healthcare Assistant</strong>
+                <strong>Medical AI Assistant</strong>
                 
             </div>
             <!-- Project selector removed; using default project ID -->

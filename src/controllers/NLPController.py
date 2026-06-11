@@ -3,6 +3,7 @@ from models.db_schema import Project, DataChunk
 from stores.llm.LLMEnum import DocumentTypeEnum
 from typing import List
 import json
+import logging
 
 
 class NLPController(BaseController):
@@ -14,6 +15,8 @@ class NLPController(BaseController):
         self.generation_client = generation_client
         self.embedding_client = embedding_client
         self.template_parser = template_parser
+
+        self.logger = logging.getLogger(__name__)
 
     def create_collection_name(self, project_id: str):
         return f"collection_{project_id}".strip()
